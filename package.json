@@ -4,7 +4,7 @@
   "description": "API for Xade crypto analysis",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node api.js",
     "dev": "nodemon index.js",
     "test": "jest",
     "test:api": "jest tests/api.test.js",
