@@ -654,13 +654,21 @@ Available functions:
       - Galaxy Score and AltRank
       - Categories and blockchains
 
+- News and Social Data:
+  - getTopicNews(topic) - returns latest news articles for a topic with:
+    * Article title, URL, and image
+    * Publication date and sentiment score
+    * Creator information (name, followers)
+    * Interaction metrics (24h and total)
+  - getSocialData(token) - returns detailed social metrics
+
 Example format:
 \`\`\`javascript
 const data = {
   currentPrice: await price("bitcoin"),
   priceHistory: await priceHistoryData("bitcoin", "30d"),
   socialMetrics: await getSocialData("bitcoin"),
-  news: await usePerplexity("latest bitcoin news and analysis")
+  news: await getTopicNews("bitcoin"),
 };
 return data;
 \`\`\`
@@ -923,6 +931,45 @@ const executeCode = async (code) => {
       // Add getListByCategory to context
       getListByCategory: async (sort = 'social_dominance', filter = '', limit = 20) => 
         await getListByCategory(sort, filter, limit),
+
+      // Add getTopicNews to context
+      getTopicNews: async (topic) => {
+        try {
+          const response = await axios.get(`https://lunarcrush.com/api4/public/topic/${topic}/news/v1`, {
+            headers: {
+              'Authorization': `Bearer ${LUNARCRUSH_API_KEY}`
+            }
+          });
+
+          if (!response.data?.data) {
+            return 'No news data available';
+          }
+
+          return response.data.data.map(item => ({
+            id: item.id,
+            type: item.post_type,
+            title: item.post_title,
+            url: item.post_link,
+            image: item.post_image,
+            created: new Date(item.post_created * 1000).toISOString(),
+            sentiment: item.post_sentiment,
+            creator: {
+              id: item.creator_id,
+              name: item.creator_name,
+              displayName: item.creator_display_name,
+              followers: item.creator_followers,
+              avatar: item.creator_avatar
+            },
+            interactions: {
+              last24h: item.interactions_24h,
+              total: item.interactions_total
+            }
+          }));
+        } catch (error) {
+          console.error('Error fetching topic news:', error);
+          return 'Failed to fetch news data';
+        }
+      },
     };
 
     // Create async function from the code
