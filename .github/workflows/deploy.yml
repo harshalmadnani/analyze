@@ -26,7 +26,29 @@ jobs:
         username: ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd ~/xade-api
-          git pull
+          # Install Node.js if not installed
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+          . ~/.nvm/nvm.sh
+          nvm install 16
+          
+          # Install PM2 globally
+          npm install -g pm2
+          
+          # Create project directory if it doesn't exist
+          mkdir -p ~/xade-api
+          
+          # Clone repository if it doesn't exist, otherwise pull latest changes
+          if [ ! -d ~/xade-api/.git ]; then
+            cd ~/xade-api
+            git init
+            git remote add origin https://github.com/harshalmadnani/ai-api.git
+            git fetch
+            git checkout -f main
+          else
+            cd ~/xade-api
+            git pull origin main
+          fi
+          
+          # Install dependencies and restart
           npm install
-          pm2 restart all
+          pm2 restart xade-api || pm2 start index.js --name xade-api
