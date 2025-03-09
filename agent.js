@@ -662,6 +662,19 @@ Available functions:
     * Interaction metrics (24h and total)
   - getSocialData(token) - returns detailed social metrics
 
+- Token Metrics:
+  - liquidity(token) - returns current liquidity in USD
+  - liquidityChange24h(token) - returns 24h liquidity change percentage
+  - offChainVolume(token) - returns off-chain volume in USD
+  - volume7d(token) - returns 7-day volume in USD
+  - volumeChange24h(token) - returns 24h volume change percentage
+
+- Price Changes:
+  - priceChange24h(token) - returns 24h price change percentage
+  - priceChange1h(token) - returns 1h price change percentage
+  - priceChange7d(token) - returns 7d price change percentage
+  - priceChange1m(token) - returns 30d price change percentage
+
 Example format:
 \`\`\`javascript
 const data = {
@@ -969,6 +982,49 @@ const executeCode = async (code) => {
           console.error('Error fetching topic news:', error);
           return 'Failed to fetch news data';
         }
+      },
+
+      // Add Token Metrics Functions
+      liquidity: async (token) => {
+        const normalizedToken = context.getTokenName(token);
+        const data = await fetchMarketData(normalizedToken);
+        return `$${data?.liquidity?.toFixed(2) || 'N/A'}`;
+      },
+      
+      liquidityChange24h: async (token) => {
+        const normalizedToken = context.getTokenName(token);
+        const data = await fetchMarketData(normalizedToken);
+        return data?.liquidity_change_24h ? `${data.liquidity_change_24h.toFixed(2)}%` : 'N/A';
+      },
+      
+      offChainVolume: async (token) => {
+        const normalizedToken = context.getTokenName(token);
+        const data = await fetchMarketData(normalizedToken);
+        return data?.off_chain_volume ? `$${data.off_chain_volume.toFixed(2)}` : 'N/A';
+      },
+      
+      volume7d: async (token) => {
+        const normalizedToken = context.getTokenName(token);
+        const data = await fetchMarketData(normalizedToken);
+        return data?.volume_7d ? `$${data.volume_7d.toFixed(2)}` : 'N/A';
+      },
+      
+      volumeChange24h: async (token) => {
+        const normalizedToken = context.getTokenName(token);
+        const data = await fetchMarketData(normalizedToken);
+        return data?.volume_change_24h ? `${data.volume_change_24h.toFixed(2)}%` : 'N/A';
+      },
+      
+      priceChange1m: async (token) => {
+        const normalizedToken = context.getTokenName(token);
+        const data = await fetchMarketData(normalizedToken);
+        return data?.price_change_1m ? `${data.price_change_1m.toFixed(2)}%` : 'N/A';
+      },
+      
+      priceChange1y: async (token) => {
+        const normalizedToken = context.getTokenName(token);
+        const data = await fetchMarketData(normalizedToken);
+        return data?.price_change_1y ? `${data.price_change_1y.toFixed(2)}%` : 'N/A';
       },
     };
 
