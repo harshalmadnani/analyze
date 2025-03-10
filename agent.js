@@ -157,25 +157,7 @@ const calculateTrend = (values) => {
   return 'Sideways';
 };
 
-// Perplexity API
-const usePerplexity = async (content) => {
-  try {
-    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
-      model: "llama-3.1-sonar-small-128k-online",
-      messages: [{ role: "user", content }]
-    }, {
-      headers: {
-        Authorization: `Bearer ${process.env.REACT_APP_PERPLEXITY_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    return response.data.choices[0].message.content;
-  } catch (error) {
-    console.error('Perplexity API error:', error);
-    return 'Unable to fetch data from Perplexity API';
-  }
-};
+
 
 // Constants
 const API_KEYS = {
@@ -582,7 +564,7 @@ const getListByCategory = async (sort = 'social_dominance', filter = '', limit =
 const dataAPI = async (userInput) => {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         { 
           role: "system",
@@ -618,7 +600,6 @@ Available functions:
   - telegram(token) - returns Telegram group link
   - discord(token) - returns Discord server link
   - description(token) - returns project description
-  - usePerplexity(query) - returns latest news and analysis using Perplexity AI
 
 - Historical Data:
   - priceHistoryData(token, period) - returns array of {date, price} objects
@@ -695,7 +676,6 @@ Instructions:
 6. For questions about token performance, price movement, or trading decisions, always include:
    - Technical analysis (1d, 7d, and 30d periods)
    - Recent price changes
-   - Latest news from Perplexity
    - Market data (volume, liquidity, market cap)
 
 When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences.`
@@ -715,8 +695,20 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
 // Code Execution Function
 const executeCode = async (code) => {
   try {
-    const cleanCode = code.replace(/```javascript\n?/, '').replace(/```\n?/, '').trim();
-    
+    // Clean and validate the code input
+    if (!code || typeof code !== 'string') {
+      throw new Error('Invalid code input');
+    }
+
+    const cleanCode = code
+      .replace(/```javascript\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+
+    if (!cleanCode) {
+      throw new Error('Empty code after cleaning');
+    }
+
     // Create a safe context with allowed functions
     const context = {
       // Add default coins array to context
@@ -819,9 +811,6 @@ const executeCode = async (code) => {
       },
 
       // Advanced Analysis Functions
-      usePerplexity: async (query) => {
-        return await usePerplexity(query);
-      },
       cexs: async (token) => {
         return await cexs(token);
       },
@@ -1028,23 +1017,44 @@ const executeCode = async (code) => {
       },
     };
 
-    // Create async function from the code
+    // Create and execute async function with better error handling
     const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
     const fn = new AsyncFunction(...Object.keys(context), `
       try {
-        ${cleanCode}
+        // Ensure the code returns a value
+        const result = await (async () => {
+          ${cleanCode}
+        })();
+        
+        // Handle undefined or null results
+        if (result === undefined || result === null) {
+          return { error: 'No data returned' };
+        }
+        
+        return result;
       } catch (error) {
         console.error('Error in executed code:', error);
-        throw error;
+        return { error: error.message };
       }
     `);
     
     // Execute the function with the context
     const result = await fn(...Object.values(context));
+    
+    // Handle error results
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    
     return result;
   } catch (error) {
     console.error('Error executing code:', error);
-    throw new Error(`Code execution failed: ${error.message}`);
+    // Return a structured error response instead of throwing
+    return {
+      error: true,
+      message: error.message,
+      timestamp: new Date().toISOString()
+    };
   }
 };
 
@@ -1102,8 +1112,8 @@ const analyzeQuery = async (userInput, systemPrompt) => {
     console.log('Step 2: Executing data fetching code...');
     const executedData = await executeCode(dataFetchingCode);
     console.log('Executed data:', executedData);
-    if (!executedData) {
-      throw new Error('Failed to execute data fetching code');
+    if (executedData && executedData.error) {
+      throw new Error(`Data fetching failed: ${executedData.message}`);
     }
 
     // Step 3: Analyze the data and generate insights using the provided system prompt
