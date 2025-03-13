@@ -678,7 +678,8 @@ Instructions:
    - Recent price changes
    - Market data (volume, liquidity, market cap)
 
-When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences.`
+When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences
+`
         },
         { role: "user", content: userInput }
       ],
@@ -1110,10 +1111,17 @@ const analyzeQuery = async (userInput, systemPrompt) => {
 
     // Step 2: Execute the code to fetch actual data
     console.log('Step 2: Executing data fetching code...');
-    const executedData = await executeCode(dataFetchingCode);
-    console.log('Executed data:', executedData);
-    if (executedData && executedData.error) {
-      throw new Error(`Data fetching failed: ${executedData.message}`);
+    let executedData;
+    try {
+      executedData = await executeCode(dataFetchingCode);
+      console.log('Executed data:', executedData);
+    } catch (execError) {
+      console.error('Warning: Data execution failed:', execError);
+      executedData = {
+        error: true,
+        message: execError.message,
+        partialData: {}
+      };
     }
 
     // Step 3: Analyze the data and generate insights using the provided system prompt
