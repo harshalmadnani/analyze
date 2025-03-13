@@ -15,7 +15,7 @@ out/
 *.swo
 .DS_Store
 Thumbs.db
-
+agent-server.cer
 # Logs
 *.log
 npm-debug.log*
