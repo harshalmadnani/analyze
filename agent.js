@@ -1066,7 +1066,7 @@ const characterAPI = async (userInput, executedData, systemPrompt) => {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
