@@ -31,11 +31,10 @@ app.post('/api/analyze', limiter, async (req, res) => {
     
     if (!query) {
       logger.warn('Request received without query');
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         error: 'Query is required'
       });
-      query = '';
     }
 
     logger.info('Processing analysis request', {
