@@ -24,21 +24,22 @@ const limiter = rateLimit({
 });
 
 // API endpoint
-app.post('/api/analyze', async (req, res) => {
+app.post('/api/analyze', limiter, async (req, res) => {
   const startTime = Date.now();
   try {
     const { query, systemPrompt } = req.body;
     
     if (!query) {
       logger.warn('Request received without query');
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Query is required'
       });
+      query = '';
     }
 
     logger.info('Processing analysis request', {
-      query: query.substring(0, 100), // Log first 100 chars of query
+      query: query?.substring(0, 100),
       timestamp: new Date().toISOString()
     });
 
