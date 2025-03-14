@@ -560,15 +560,24 @@ const getListByCategory = async (sort = 'social_dominance', filter = '', limit =
   }
 };
 
-// Data API Function
-const dataAPI = async (userInput) => {
+// Add model configuration
+const MODEL_CONFIG = {
+  'gpt-4o': {
+    type: 'openai',
+    model: 'gpt-4o'
+  },
+  'io.net': {
+    type: 'io.net',
+    model: 'meta-llama/Llama-3.3-70B-Instruct',
+    url: 'https://api.intelligence.io.solutions/api/v1/chat/completions',
+    authToken: 'io-v2-eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvd25lciI6IjRlMjg4NTg3LTEyOTktNGIxZS1hYjZmLWMxM2ExZGRiNTVkMiIsImV4cCI6NDg5NTQ5NTA5N30.K5Ub3GSKKTbsyFMR2kWPBPvNdu0d5vQ0M1otD29yq8N4pWraOQIiYGQF0HRDz1CCxQD9dUH2LwCNqVfG-3wKEw'
+  }
+};
+
+// Update dataAPI function to handle both models
+const dataAPI = async (userInput, model = 'gpt-4o') => {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { 
-          role: "system",
-          content: `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
+    const systemContent = `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
             The user's wallet addresses are: ${portfolioAddresses.join(', ')}
 
 Available functions:
@@ -679,17 +688,58 @@ Instructions:
    - Market data (volume, liquidity, market cap)
 
 When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences
-`
-        },
-        { role: "user", content: userInput }
-      ],
-      temperature: 0.7
-    });
+`;
 
-    return response.choices[0].message.content;
+    if (model === 'gpt-4o') {
+      // Use OpenAI
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { 
+            role: "system",
+            content: systemContent
+          },
+          { role: "user", content: userInput }
+        ],
+        temperature: 0.7
+      });
+
+      return response.choices[0].message.content;
+
+    } else if (model === 'io.net') {
+      // Use io.net API
+      const response = await axios.post(
+        MODEL_CONFIG['io.net'].url,
+        {
+          model: MODEL_CONFIG['io.net'].model,
+          "reasoning-content": "false",
+          messages: [
+            {
+              role: "system",
+              content: systemContent
+            },
+            {
+              role: "user",
+              content: userInput
+            }
+          ]
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`
+          }
+        }
+      );
+
+      return response.data.choices[0].message.content;
+
+    } else {
+      throw new Error(`Unsupported model: ${model}`);
+    }
+
   } catch (error) {
-    console.error('Error calling OpenAI API:', error);
-    throw new Error('Failed to get AI response');
+    console.error('Error calling AI API:', error);
+    throw new Error(`Failed to get AI response: ${error.message}`);
   }
 };
 
@@ -1059,51 +1109,73 @@ const executeCode = async (code) => {
   }
 };
 
-// Character API Function
-const characterAPI = async (userInput, executedData, systemPrompt) => {
+// Update characterAPI function similarly
+const characterAPI = async (userInput, executedData, systemPrompt, model = 'gpt-4o') => {
   try {
     if (!systemPrompt) {
       throw new Error('System prompt is required for character API');
     }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: `User Question: ${userInput}
+    const messages = [
+      {
+        role: "system",
+        content: systemPrompt
+      },
+      {
+        role: "user",
+        content: `User Question: ${userInput}
 
 Available Data:
 ${JSON.stringify(executedData, null, 2)}
 
 Please analyze this data and provide insights that directly address the user's question.`
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000
-    });
+      }
+    ];
 
-    return response.choices[0].message.content;
+    if (model === 'gpt-4o') {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 1000
+      });
+
+      return response.choices[0].message.content;
+
+    } else if (model === 'io.net') {
+      const response = await axios.post(
+        MODEL_CONFIG['io.net'].url,
+        {
+          model: MODEL_CONFIG['io.net'].model,
+          "reasoning-content": "false",
+          messages: messages
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`
+          }
+        }
+      );
+
+      return response.data.choices[0].message.content;
+    }
+
   } catch (error) {
-    console.error('Error calling OpenAI Character API:', error);
+    console.error('Error calling AI Character API:', error);
     throw new Error('Failed to analyze data');
   }
 };
 
-// Main Analysis Pipeline API
-const analyzeQuery = async (userInput, systemPrompt) => {
+// Update analyzeQuery function to accept model parameter
+const analyzeQuery = async (userInput, systemPrompt, model = 'gpt-4o') => {
   try {
     if (!systemPrompt) {
       throw new Error('System prompt is required');
     }
 
-    // Step 1: Get data fetching code from OpenAI
+    // Step 1: Get data fetching code from AI
     console.log('Step 1: Generating data fetching code...');
-    const dataFetchingCode = await dataAPI(userInput);
+    const dataFetchingCode = await dataAPI(userInput, model);
     console.log('Data fetching code generated:', dataFetchingCode);
     if (!dataFetchingCode) {
       throw new Error('Failed to generate data fetching code');
@@ -1124,15 +1196,14 @@ const analyzeQuery = async (userInput, systemPrompt) => {
       };
     }
 
-    // Step 3: Analyze the data and generate insights using the provided system prompt
+    // Step 3: Analyze the data using the specified model
     console.log('Step 3: Generating analysis and insights...');
-    const analysis = await characterAPI(userInput, executedData, systemPrompt);
+    const analysis = await characterAPI(userInput, executedData, systemPrompt, model);
     console.log('Generated analysis:', analysis);
     if (!analysis) {
       throw new Error('Failed to generate analysis');
     }
 
-    // Return complete results
     return {
       success: true,
       data: {
@@ -1141,6 +1212,7 @@ const analyzeQuery = async (userInput, systemPrompt) => {
         debugInfo: {
           generatedCode: dataFetchingCode,
           systemPrompt: systemPrompt,
+          model: model,
           timestamp: new Date().toISOString()
         }
       }

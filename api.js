@@ -27,7 +27,7 @@ const limiter = rateLimit({
 app.post('/api/analyze', limiter, async (req, res) => {
   const startTime = Date.now();
   try {
-    const { query, systemPrompt } = req.body;
+    const { query, systemPrompt, model } = req.body;
     
     if (!query) {
       logger.warn('Request received without query');
@@ -39,10 +39,11 @@ app.post('/api/analyze', limiter, async (req, res) => {
 
     logger.info('Processing analysis request', {
       query: query?.substring(0, 100),
+      model: model || 'gpt-4o',
       timestamp: new Date().toISOString()
     });
 
-    const result = await analyzeQuery(query, systemPrompt);
+    const result = await analyzeQuery(query, systemPrompt, model);
     
     const duration = Date.now() - startTime;
     logger.info('Analysis completed', {
