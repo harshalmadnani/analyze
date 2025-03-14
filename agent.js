@@ -712,7 +712,7 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
         MODEL_CONFIG['io.net'].url,
         {
           model: MODEL_CONFIG['io.net'].model,
-          "reasoning-content": "false",
+          reasoningContent: false,
           messages: [
             {
               role: "system",
@@ -1136,8 +1136,7 @@ Please analyze this data and provide insights that directly address the user's q
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: messages,
-        temperature: 0.7,
-        max_tokens: 1000
+        max_tokens: 70
       });
 
       return response.choices[0].message.content;
@@ -1147,7 +1146,8 @@ Please analyze this data and provide insights that directly address the user's q
         MODEL_CONFIG['io.net'].url,
         {
           model: MODEL_CONFIG['io.net'].model,
-          "reasoning-content": "false",
+          reasoningContent: false,
+          max_tokens: 70,
           messages: messages
         },
         {
