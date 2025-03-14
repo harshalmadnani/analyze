@@ -1136,7 +1136,7 @@ Please analyze this data and provide insights that directly address the user's q
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: messages,
-        max_tokens: 70
+        max_tokens: 240
       });
 
       return response.choices[0].message.content;
@@ -1147,7 +1147,7 @@ Please analyze this data and provide insights that directly address the user's q
         {
           model: MODEL_CONFIG['io.net'].model,
           reasoningContent: false,
-          max_tokens: 70,
+          max_tokens: 240,
           messages: messages
         },
         {
