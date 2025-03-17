@@ -562,9 +562,9 @@ const getListByCategory = async (sort = 'social_dominance', filter = '', limit =
 
 // Add model configuration
 const MODEL_CONFIG = {
-  'gpt-4o': {
+  'o3-mini': {
     type: 'openai',
-    model: 'gpt-4o'
+    model: 'o3-mini'
   },
   'io.net': {
     type: 'io.net',
@@ -575,7 +575,7 @@ const MODEL_CONFIG = {
 };
 
 // Update dataAPI function to handle both models
-const dataAPI = async (userInput, model = 'gpt-4o') => {
+const dataAPI = async (userInput, model = 'o3-mini') => {
   try {
     const systemContent = `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
             The user's wallet addresses are: ${portfolioAddresses.join(', ')}
@@ -690,10 +690,10 @@ Instructions:
 When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences
 `;
 
-    if (model === 'gpt-4o') {
+    if (model === 'o3-mini') {
       // Use OpenAI
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "o3-mini",
         messages: [
           { 
             role: "system",
@@ -701,7 +701,6 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
           },
           { role: "user", content: userInput }
         ],
-        temperature: 0.7
       });
 
       return response.choices[0].message.content;
@@ -1110,7 +1109,7 @@ const executeCode = async (code) => {
 };
 
 // Update characterAPI function similarly
-const characterAPI = async (userInput, executedData, systemPrompt, model = 'gpt-4o') => {
+const characterAPI = async (userInput, executedData, systemPrompt, model = 'o3-mini') => {
   try {
     if (!systemPrompt) {
       throw new Error('System prompt is required for character API');
@@ -1132,11 +1131,10 @@ Please analyze this data and provide insights that directly address the user's q
       }
     ];
 
-    if (model === 'gpt-4o') {
+    if (model === 'o3-mini') {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "o3-mini",
         messages: messages,
-        max_tokens: 70
       });
 
       return response.choices[0].message.content;
@@ -1167,7 +1165,7 @@ Please analyze this data and provide insights that directly address the user's q
 };
 
 // Update analyzeQuery function to accept model parameter
-const analyzeQuery = async (userInput, systemPrompt, model = 'gpt-4o') => {
+const analyzeQuery = async (userInput, systemPrompt, model = 'o3-mini') => {
   try {
     if (!systemPrompt) {
       throw new Error('System prompt is required');
