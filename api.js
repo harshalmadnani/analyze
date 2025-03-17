@@ -4,97 +4,88 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { analyzeQuery } = require('./agent');
 const logger = require('./logger');
-const app = express();
 
-// Middleware
+const app = express();
+const PORT = 3004;
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ✅ CORS Middleware (Allow All Origins)
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
-// Handle preflight requests
-app.options('*', cors());
+// ✅ Ensure CORS Headers are Set on All Requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
 
-// Rate limiting
+// ✅ Handle OPTIONS Preflight Requests
+app.options('*', (req, res) => {
+  res.sendStatus(204);
+});
+
+// ✅ Rate Limiting
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
+  windowMs: 60 * 1000, // 1 minute
   max: 120, // Allow 120 requests per minute per IP
-  message: {
-    status: 429,
-    error: 'Too many requests, please try again later',
-    nextValidRequestTime: '' // Will be automatically filled
-  },
+  message: { status: 429, error: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// API endpoint
-app.post('/api/analyze', limiter, async (req, res) => {
-  const startTime = Date.now();
+// ✅ API Endpoint
+app.post('/analyze', limiter, async (req, res) => {
   try {
     const { query, systemPrompt, model } = req.body;
-    
-    if (!query) {
-      logger.warn('Request received without query');
-      return res.status(400).json({
-        success: false,
-        error: 'Query is required'
-      });
-    }
 
-    logger.info('Processing analysis request', {
-      query: query?.substring(0, 100),
-      model: model || 'gpt-4o',
-      timestamp: new Date().toISOString()
-    });
+if (!query) {
+  logger.warn('Request received without query');
+  return res.status(400).json({ success: false, error: 'Query is required' });
+}
 
-    const result = await analyzeQuery(query, systemPrompt, model);
-    
-    const duration = Date.now() - startTime;
-    logger.info('Analysis completed', {
-      duration,
-      success: true
-    });
-
-    res.json(result);
-
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    logger.error('API Error:', {
-      error: error.message,
-      stack: error.stack,
-      duration
-    });
-
-    res.status(error.status || 500).json({
-      success: false,
-      error: {
-        message: error.message || 'Internal server error',
-        code: error.code || 'INTERNAL_ERROR'
-      }
-    });
-  }
+logger.info('Processing analysis request', {
+  query: query.substring(0, 100),
+  model: model || 'o3-mini',
+  timestamp: new Date().toISOString()
 });
 
-// Add this new endpoint
+const result = await analyzeQuery(query, systemPrompt, model);
 
-// Error handling middleware
+res.json(result);
+} catch (error) {
+    logger.error('API Error:', { error: error.message, stack: error.stack });
+
+res.status(500).json({
+  success: false,
+  error: { message: error.message || 'Internal server error', code: 'INTERNAL_ERROR' }
+});
+}
+});
+
+// ✅ Global Error Handling Middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+
+console.error('❌ Server Error:', err.stack);
   res.status(500).json({
     success: false,
-    error: {
-      message: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
-    }
+    error: { message: 'Internal server error', details: process.env.NODE_ENV === 'development' ? err.message : undefined }
   });
 });
 
-// Update port to work with Elastic Beanstalk
-const PORT = process.env.PORT || 3004;
-
+// ✅ Start Server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-}); 
+  console.log(`🚀 API running on port ${PORT}, allowing all origins`);
+});
