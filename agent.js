@@ -621,6 +621,7 @@ Available functions:
   - investors(token) - returns detailed investor information
   - distribution(token) - returns token distribution
   - releaseSchedule(token) - returns token release schedule
+  - getKadenaBalance(address) - returns Kadena wallet balance information
 
 - Social Analysis:
   - getSocialData(token) - returns detailed social metrics including:
@@ -1065,6 +1066,21 @@ const executeCode = async (code) => {
         const data = await fetchMarketData(normalizedToken);
         return data?.price_change_1y ? `${data.price_change_1y.toFixed(2)}%` : 'N/A';
       },
+
+      // Add getKadenaBalance to context
+      getKadenaBalance: async (address) => {
+        try {
+          const response = await axios.get(`https://kadena-balance.onrender.com/api/balance`, {
+            params: {
+              account: address
+            }
+          });
+          return response.data;
+        } catch (error) {
+          console.error('Error fetching Kadena balance:', error);
+          return { error: error.message, status: 'failed' };
+        }
+      },
     };
 
     // Create and execute async function with better error handling
@@ -1229,6 +1245,21 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'o3-mini') => {
   }
 };
 
+// Add getKadenaBalance function definition
+const getKadenaBalance = async (address) => {
+  try {
+    const response = await axios.get(`https://kadena-balance.onrender.com/api/balance`, {
+      params: {
+        account: address
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Kadena balance:', error);
+    return { error: error.message, status: 'failed' };
+  }
+};
+
 // Move all exports to the end of the file
 module.exports = {
     analyzeQuery,
@@ -1239,6 +1270,7 @@ module.exports = {
     priceChange30d,
     getSocialData,
     getListByCategory,
+    getKadenaBalance,
     // ... other exports ...
 };
 
@@ -1249,4 +1281,5 @@ module.exports = {
 // } else {
 //   console.error(response.error.message);
 // }
+
 
