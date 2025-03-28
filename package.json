@@ -1,32 +1,20 @@
 {
-  "name": "xade-api",
+  "name": "kadena-api-functions",
   "version": "1.0.0",
-  "description": "API for Xade crypto analysis",
-  "main": "index.js",
+  "description": "JavaScript functions for interacting with the Kadindexer GraphQL API",
+  "main": "kadenafunctions.js",
   "scripts": {
-    "start": "node api.js",
-    "dev": "nodemon index.js",
-    "test": "jest",
-    "test:api": "jest tests/api.test.js",
-    "test:endpoint": "jest tests/api-endpoint.test.js",
-    "test:quick": "node scripts/test-api.js",
-    "test:api-endpoints": "node scripts/test-api-endpoints.js",
-    "test:bitcoin": "node scripts/test-bitcoin-price.js"
+    "test": "node test-kadenafunctions.js"
   },
+  "keywords": [
+    "kadena",
+    "blockchain",
+    "graphql",
+    "api"
+  ],
   "dependencies": {
-    "axios": "^1.6.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.4",
-    "openai": "^4.20.0"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0",
-    "nodemon": "^3.0.1"
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  },
-  "license": "MIT"
-} 
+    "axios": "^1.8.4",
+    "dotenv": "^16.4.7",
+    "openai": "^4.90.0"
+  }
+}
