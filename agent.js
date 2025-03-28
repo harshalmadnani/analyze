@@ -15,6 +15,19 @@ const portfolioAddresses = [
 // Add LunarCrush API constant
 const LUNARCRUSH_API_KEY = process.env.REACT_APP_LUNARCRUSH_API_KEY;
 
+// Add kadenacontext function to fetch context for kadena addresses
+const kadenacontext = async (query) => {
+  try {
+    const response = await axios.post('https://api.xade.xyz/rag', {
+      question: query
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Kadena context:', error);
+    return { error: error.message };
+  }
+};
+
 const kadenafunctions = {
   graphqlEndpoint: process.env.KADENA_GRAPHQL_ENDPOINT || 'https://api.mainnet.kadindexer.io/v0',
   graphqlApiKey: process.env.KADENA_GRAPHQL_KEY,
@@ -1162,8 +1175,8 @@ Available functions:
   - distribution(token) - returns token distribution
   - releaseSchedule(token) - returns token release schedule
 
-
 - Kadena Blockchain:
+  - kadenacontext(query) - returns RAG context for general Kadena-related queries not realted to any specific on chain data
   - kadenafunctions.getBlock(hash) - returns information about a specific block
   - kadenafunctions.getBlocksFromDepth(minimumDepth, first) - returns blocks starting from given depth
   - kadenafunctions.getBlocksFromHeight(startHeight, first) - returns blocks starting from given height
@@ -1326,6 +1339,9 @@ const executeCode = async (code) => {
       
       // Add kadenafunctions to context
       kadenafunctions: kadenafunctions,
+      
+      // Add kadenacontext to context
+      kadenacontext: async (query) => await kadenacontext(query),
       
       getTokenName: (input) => {
         const lowercaseInput = input.toLowerCase();
@@ -1795,6 +1811,7 @@ module.exports = {
     priceChange30d,
     getSocialData,
     getListByCategory,
+    kadenacontext,
     // ... other exports ...
 };
 
