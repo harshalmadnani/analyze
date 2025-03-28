@@ -13,7 +13,7 @@ const portfolioAddresses = [
 ];
 
 // Add LunarCrush API constant
-const LUNARCRUSH_API_KEY = 'deb9mcyuk3wikmvo8lhlv1jsxnm6mfdf70lw4jqdk';
+const LUNARCRUSH_API_KEY = process.env.REACT_APP_LUNARCRUSH_API_KEY;
 
 const kadenafunctions = {
   graphqlEndpoint: process.env.KADENA_GRAPHQL_ENDPOINT || 'https://api.mainnet.kadindexer.io/v0',
