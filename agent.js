@@ -1619,20 +1619,6 @@ const executeCode = async (code) => {
         return data?.price_change_1y ? `${data.price_change_1y.toFixed(2)}%` : 'N/A';
       },
 
-      // Add getKadenaBalance to context
-      getKadenaBalance: async (address) => {
-        try {
-          const response = await axios.get(`https://kadena-balance.onrender.com/api/balance`, {
-            params: {
-              account: address
-            }
-          });
-          return response.data;
-        } catch (error) {
-          console.error('Error fetching Kadena balance:', error);
-          return { error: error.message, status: 'failed' };
-        }
-      },
     };
 
     // Create and execute async function with better error handling
@@ -1798,19 +1784,6 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'o3-mini') => {
 };
 
 // Add getKadenaBalance function definition
-const getKadenaBalance = async (address) => {
-  try {
-    const response = await axios.get(`https://kadena-balance.onrender.com/api/balance`, {
-      params: {
-        account: address
-      }
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching Kadena balance:', error);
-    return { error: error.message, status: 'failed' };
-  }
-};
 
 // Move all exports to the end of the file
 module.exports = {
@@ -1822,7 +1795,6 @@ module.exports = {
     priceChange30d,
     getSocialData,
     getListByCategory,
-    getKadenaBalance,
     // ... other exports ...
 };
 
