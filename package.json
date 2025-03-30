@@ -1,23 +1,35 @@
 {
-  "name": "kadena-api-functions",
+  "name": "xade-api",
   "version": "1.0.0",
-  "description": "JavaScript functions for interacting with the Kadindexer GraphQL API",
-  "main": "kadenafunctions.js",
+  "description": "Xade API for cryptocurrency data and AI analysis",
+  "main": "api.js",
   "scripts": {
-    "test": "node test-kadenafunctions.js"
+    "start": "node api.js",
+    "dev": "nodemon api.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "kadena",
-    "blockchain",
-    "graphql",
-    "api"
-  ],
   "dependencies": {
-    "axios": "^1.8.4",
+    "axios": "^1.4.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.3.1",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
-    "openai": "^4.90.0"
-  }
+    "openai": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xade-finance/xade-api.git"
+  },
+  "keywords": [
+    "cryptocurrency",
+    "api",
+    "ai",
+    "finance",
+    "kadena"
+  ],
+  "author": "Xade Finance",
+  "license": "MIT"
 }
