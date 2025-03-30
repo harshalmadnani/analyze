@@ -42,8 +42,38 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
+// API Key Authentication Middleware
+const authenticateApiKey = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'];
+  
+  // Check if API key is provided
+  if (!apiKey) {
+    logger.warn('Request received without API key');
+    return res.status(401).json({
+      success: false,
+      error: { message: 'API key is required', code: 'AUTH_REQUIRED' }
+    });
+  }
+  
+  // Validate the API key (you can store valid keys in .env or a database)
+  // For example: process.env.API_KEY or an array of valid keys
+  const validApiKeys = process.env.API_KEYS ? process.env.API_KEYS.split(',') : [];
+  
+  if (!validApiKeys.includes(apiKey)) {
+    logger.warn('Invalid API key used', { apiKey: apiKey.substring(0, 5) + '...' });
+    return res.status(403).json({
+      success: false,
+      error: { message: 'Invalid API key', code: 'INVALID_AUTH' }
+    });
+  }
+  
+  // API key is valid, proceed
+  req.apiKey = apiKey; // Optionally attach to req object for later use
+  next();
+};
+
 // ✅ API Endpoint
-app.post('/analyze', limiter, async (req, res) => {
+app.post('/analyze', authenticateApiKey, limiter, async (req, res) => {
   try {
     const { query, systemPrompt, model } = req.body;
 
