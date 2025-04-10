@@ -9,6 +9,60 @@ const openai = new OpenAI({
     apiKey: OPENAI_API_KEY
 });
 
+/**
+ * Helper function to thoroughly sanitize think tags from AI responses
+ * @param {string} text - The text to sanitize
+ * @returns {string} - Sanitized text with all think tags removed
+ */
+const sanitizeThinkTags = (text) => {
+  if (!text) return '';
+  
+  // Special handling for io.net format - extract only final response after all think tags
+  const finalThinkTagIndex = text.lastIndexOf('</think>');
+  if (finalThinkTagIndex !== -1) {
+    const afterFinalThink = text.substring(finalThinkTagIndex + 8).trim();
+    if (afterFinalThink) {
+      return afterFinalThink;
+    }
+  }
+  
+  // Multiple passes to handle complex/nested tags
+  let cleaned = text;
+  
+  // Handle different think tag variations and formats
+  const patterns = [
+    // Standard format with content
+    /<think>[\s\S]*?<\/think>/g,
+    // Nested or malformed tags
+    /<think[\s\S]*?think>/g,
+    // Handle variations with spaces or attributes
+    /<\s*think\s*[^>]*>[\s\S]*?<\s*\/\s*think\s*>/g,
+    // Single think tags without closing
+    /<\s*think[^>]*?>/g,
+    // Single closing think tags
+    /<\/\s*think\s*>/g,
+    // Any orphaned tags containing the word think
+    /<[^>]*think[^>]*>/g
+  ];
+  
+  // Apply each pattern
+  patterns.forEach(pattern => {
+    cleaned = cleaned.replace(pattern, '');
+  });
+  
+  // Multi-pass to catch deeply nested tags
+  for (let i = 0; i < 3; i++) {
+    let previousCleaned = cleaned;
+    patterns.forEach(pattern => {
+      cleaned = cleaned.replace(pattern, '');
+    });
+    // If no more changes, we can stop
+    if (previousCleaned === cleaned) break;
+  }
+  
+  return cleaned.trim();
+};
+
 // Model configuration
 const MODEL_CONFIG = {
   'o3-mini': {
@@ -17,7 +71,7 @@ const MODEL_CONFIG = {
   },
   'io.net': {
     type: 'io.net',
-    model: 'meta-llama/Llama-3.3-70B-Instruct',
+    model: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B',
     url: 'https://api.intelligence.io.solutions/api/v1/chat/completions',
     authToken: 'io-v2-eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvd25lciI6IjRlMjg4NTg3LTEyOTktNGIxZS1hYjZmLWMxM2ExZGRiNTVkMiIsImV4cCI6NDg5NTQ5NTA5N30.K5Ub3GSKKTbsyFMR2kWPBPvNdu0d5vQ0M1otD29yq8N4pWraOQIiYGQF0HRDz1CCxQD9dUH2LwCNqVfG-3wKEw'
   }
@@ -44,7 +98,7 @@ const kadenacontext = async (query) => {
  * @param {string} model - The AI model to use
  * @returns {Promise<string>} - Data fetching code
  */
-const dataAPI = async (userInput, model = 'o3-mini') => {
+const dataAPI = async (userInput, model = 'io.net') => {
   try {
     const systemContent = `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
             The user's wallet addresses are: ${portfolioAddresses.join(', ')}
@@ -165,6 +219,7 @@ Instructions:
    - Technical analysis (1d, 7d, and 30d periods)
    - Recent price changes
    - Market data (volume, liquidity, market cap)
+7. Always return the fetched data as a structured object
 
 When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences
 `;
@@ -186,30 +241,62 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
 
     } else if (model === 'io.net') {
       // Use io.net API
-      const response = await axios.post(
-        MODEL_CONFIG['io.net'].url,
-        {
-          model: MODEL_CONFIG['io.net'].model,
-          reasoningContent: false,
-          messages: [
-            {
-              role: "system",
-              content: systemContent
-            },
-            {
-              role: "user",
-              content: userInput
+      try {
+        const response = await axios.post(
+          MODEL_CONFIG['io.net'].url,
+          {
+            model: MODEL_CONFIG['io.net'].model,
+            reasoningContent: false,
+           
+            messages: [
+              {
+                role: "system",
+                content: systemContent
+              },
+              {
+                role: "user",
+                content: userInput
+              }
+            ]
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`
             }
-          ]
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`
           }
-        }
-      );
+        );
 
-      return response.data.choices[0].message.content;
+        // Check for valid response before attempting to access content
+        if (!response || !response.data || !response.data.choices || 
+            !response.data.choices[0] || !response.data.choices[0].message) {
+          console.error('Invalid response structure from IO.net API:', response);
+          throw new Error('Received invalid response structure from API');
+        }
+
+        // Get content and handle special io.net think tag format
+        let content = response.data.choices[0].message.content || '';
+        
+        // First get everything after the final closing think tag if any exist
+        const finalThinkTagIndex = content.lastIndexOf('</think>');
+        if (finalThinkTagIndex !== -1) {
+          content = content.substring(finalThinkTagIndex + 8).trim();
+        }
+        
+        // If that didn't work, try to extract actual content after removing think tags
+        if (!content) {
+          content = sanitizeThinkTags(response.data.choices[0].message.content || '');
+        }
+        
+        // If we still have nothing, use the original content (could be empty)
+        if (!content) {
+          content = response.data.choices[0].message.content || '';
+        }
+        
+        return content;
+      } catch (ioError) {
+        console.error('Error in IO.net API call:', ioError);
+        throw new Error(`IO.net API error: ${ioError.message}`);
+      }
 
     } else {
       throw new Error(`Unsupported model: ${model}`);
@@ -229,7 +316,7 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
  * @param {string} model - The AI model to use
  * @returns {Promise<string>} - Analysis and insights
  */
-const characterAPI = async (userInput, executedData, systemPrompt, model = 'o3-mini') => {
+const characterAPI = async (userInput, executedData, systemPrompt, model = 'io.net') => {
   try {
     if (!systemPrompt) {
       throw new Error('System prompt is required for character API');
@@ -260,22 +347,52 @@ Please analyze this data and provide insights that directly address the user's q
       return response.choices[0].message.content;
 
     } else if (model === 'io.net') {
-      const response = await axios.post(
-        MODEL_CONFIG['io.net'].url,
-        {
-          model: MODEL_CONFIG['io.net'].model,
-          reasoningContent: false,
-          max_tokens: 70,
-          messages: messages
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`
+      try {
+        const response = await axios.post(
+          MODEL_CONFIG['io.net'].url,
+          {
+            model: MODEL_CONFIG['io.net'].model,
+            reasoningContent: false,
+            messages: messages
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`
+            }
           }
-        }
-      );
+        );
 
-      return response.data.choices[0].message.content;
+        // Check for valid response before attempting to access content
+        if (!response || !response.data || !response.data.choices || 
+            !response.data.choices[0] || !response.data.choices[0].message) {
+          console.error('Invalid response structure from IO.net API:', response);
+          throw new Error('Received invalid response structure from API');
+        }
+
+        // Get content and handle special io.net think tag format
+        let content = response.data.choices[0].message.content || '';
+        
+        // First get everything after the final closing think tag if any exist
+        const finalThinkTagIndex = content.lastIndexOf('</think>');
+        if (finalThinkTagIndex !== -1) {
+          content = content.substring(finalThinkTagIndex + 8).trim();
+        }
+        
+        // If that didn't work, try to extract actual content after removing think tags
+        if (!content) {
+          content = sanitizeThinkTags(response.data.choices[0].message.content || '');
+        }
+        
+        // If we still have nothing, use the original content (could be empty)
+        if (!content) {
+          content = response.data.choices[0].message.content || '';
+        }
+        
+        return content;
+      } catch (ioError) {
+        console.error('Error in IO.net API call:', ioError);
+        throw new Error(`IO.net API error: ${ioError.message}`);
+      }
     }
 
   } catch (error) {
@@ -296,14 +413,37 @@ const executeCode = async (code) => {
       throw new Error('Invalid code input');
     }
 
-    const cleanCode = code
-      .replace(/```javascript\n?/g, '')
-      .replace(/```\n?/g, '')
-      .trim();
-
+    // More aggressive cleaning of the code to remove explanatory text and ensure it's valid JavaScript
+    let cleanCode = code;
+    
+    // Remove any markdown code blocks
+    cleanCode = cleanCode.replace(/```javascript\n?/g, '').replace(/```\n?/g, '');
+    
+    // Remove any explanatory text before actual code - common in AI responses
+    const asyncKeywords = ['const data', 'const result', 'return', 'async function', 'await'];
+    const jsStartIndicators = asyncKeywords.map(keyword => cleanCode.indexOf(keyword)).filter(idx => idx !== -1);
+    
+    if (jsStartIndicators.length > 0) {
+      // Find the first occurrence of an actual JavaScript keyword
+      const firstCodeIdx = Math.min(...jsStartIndicators);
+      if (firstCodeIdx > 0) {
+        cleanCode = cleanCode.substring(firstCodeIdx);
+      }
+    }
+    
+    // Add a simple return if code doesn't have one
+    if (!cleanCode.includes('return ')) {
+      cleanCode = `${cleanCode.trim()}\nreturn data;`;
+    }
+    
+    // Final cleanup and validation
+    cleanCode = cleanCode.trim();
     if (!cleanCode) {
       throw new Error('Empty code after cleaning');
     }
+    
+    // Log cleaned code for debugging
+    console.log('Cleaned code to execute:', cleanCode);
 
     // Create a safe context with allowed functions
     const context = {
@@ -386,7 +526,7 @@ const executeCode = async (code) => {
  * @param {string} model - The AI model to use
  * @returns {Promise<object>} - Analysis results
  */
-const analyzeQuery = async (userInput, systemPrompt, model = 'o3-mini') => {
+const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
   try {
     if (!systemPrompt) {
       throw new Error('System prompt is required');
@@ -394,10 +534,27 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'o3-mini') => {
 
     // Step 1: Get data fetching code from AI
     console.log('Step 1: Generating data fetching code...');
-    const dataFetchingCode = await dataAPI(userInput, model);
-    console.log('Data fetching code generated:', dataFetchingCode);
-    if (!dataFetchingCode) {
-      throw new Error('Failed to generate data fetching code');
+    let dataFetchingCode;
+    try {
+      dataFetchingCode = await dataAPI(userInput, model);
+      
+      // Validate and sanitize code
+      if (!dataFetchingCode || typeof dataFetchingCode !== 'string') {
+        console.error('Invalid data fetching code returned:', dataFetchingCode);
+        throw new Error('Failed to generate valid data fetching code');
+      }
+      
+      const cleanedCode = sanitizeThinkTags(dataFetchingCode);
+      console.log('Data fetching code generated:', cleanedCode);
+      
+      if (!cleanedCode.trim()) {
+        throw new Error('Data fetching code was empty after sanitization');
+      }
+      
+      dataFetchingCode = cleanedCode;
+    } catch (codeGenError) {
+      console.error('Error generating data fetching code:', codeGenError);
+      throw new Error(`Failed to generate data fetching code: ${codeGenError.message}`);
     }
 
     // Step 2: Execute the code to fetch actual data
@@ -405,6 +562,12 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'o3-mini') => {
     let executedData;
     try {
       executedData = await executeCode(dataFetchingCode);
+      
+      // Validate executed data
+      if (!executedData) {
+        throw new Error('No data returned from execution');
+      }
+      
       console.log('Executed data:', executedData);
     } catch (execError) {
       console.error('Warning: Data execution failed:', execError);
@@ -417,17 +580,33 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'o3-mini') => {
 
     // Step 3: Analyze the data using the specified model
     console.log('Step 3: Generating analysis and insights...');
-    const analysis = await characterAPI(userInput, executedData, systemPrompt, model);
-    console.log('Generated analysis:', analysis);
-    if (!analysis) {
-      throw new Error('Failed to generate analysis');
+    let cleanedAnalysis;
+    try {
+      const rawAnalysis = await characterAPI(userInput, executedData, systemPrompt, model);
+      
+      // Validate and sanitize analysis
+      if (!rawAnalysis || typeof rawAnalysis !== 'string') {
+        console.error('Invalid analysis returned:', rawAnalysis);
+        throw new Error('Failed to generate valid analysis');
+      }
+      
+      cleanedAnalysis = sanitizeThinkTags(rawAnalysis);
+      console.log('Generated analysis:', cleanedAnalysis);
+      
+      if (!cleanedAnalysis.trim()) {
+        throw new Error('Analysis was empty after sanitization');
+      }
+    } catch (analysisError) {
+      console.error('Error generating analysis:', analysisError);
+      throw new Error(`Failed to generate analysis: ${analysisError.message}`);
     }
 
-    return {
+    // Create result object
+    const result = {
       success: true,
       data: {
         rawData: executedData,
-        analysis: analysis,
+        analysis: cleanedAnalysis,
         debugInfo: {
           generatedCode: dataFetchingCode,
           systemPrompt: systemPrompt,
@@ -436,6 +615,17 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'o3-mini') => {
         }
       }
     };
+
+    // Final thorough cleansing pass on the entire result to ensure no think tags remain
+    try {
+      const resultStr = JSON.stringify(result);
+      const cleanedResultStr = sanitizeThinkTags(resultStr);
+      return JSON.parse(cleanedResultStr);
+    } catch (finalCleanError) {
+      console.error('Error in final cleansing:', finalCleanError);
+      // Fall back to the original result if JSON parsing fails
+      return result;
+    }
 
   } catch (error) {
     console.error('Error in analysis pipeline:', error);
