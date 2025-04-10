@@ -71,9 +71,9 @@ const MODEL_CONFIG = {
   },
   'io.net': {
     type: 'io.net',
-    model: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B',
-    url: 'https://api.intelligence.io.solutions/api/v1/chat/completions',
-    authToken: 'io-v2-eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvd25lciI6IjRlMjg4NTg3LTEyOTktNGIxZS1hYjZmLWMxM2ExZGRiNTVkMiIsImV4cCI6NDg5NTQ5NTA5N30.K5Ub3GSKKTbsyFMR2kWPBPvNdu0d5vQ0M1otD29yq8N4pWraOQIiYGQF0HRDz1CCxQD9dUH2LwCNqVfG-3wKEw'
+    model: 'deepseek-ai/deepseek-r1-distill-llama-70b',
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    authToken: process.env.GROQ_API_KEY || ''
   }
 };
 
@@ -240,14 +240,12 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
       return response.choices[0].message.content;
 
     } else if (model === 'io.net') {
-      // Use io.net API
+      // Use Groq API
       try {
         const response = await axios.post(
           MODEL_CONFIG['io.net'].url,
           {
             model: MODEL_CONFIG['io.net'].model,
-            reasoningContent: false,
-           
             messages: [
               {
                 role: "system",
@@ -261,7 +259,8 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
           },
           {
             headers: {
-              'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`
+              'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`,
+              'Content-Type': 'application/json'
             }
           }
         );
@@ -269,33 +268,17 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
         // Check for valid response before attempting to access content
         if (!response || !response.data || !response.data.choices || 
             !response.data.choices[0] || !response.data.choices[0].message) {
-          console.error('Invalid response structure from IO.net API:', response);
+          console.error('Invalid response structure from Groq API:', response);
           throw new Error('Received invalid response structure from API');
         }
 
-        // Get content and handle special io.net think tag format
+        // Get content from Groq API response
         let content = response.data.choices[0].message.content || '';
-        
-        // First get everything after the final closing think tag if any exist
-        const finalThinkTagIndex = content.lastIndexOf('</think>');
-        if (finalThinkTagIndex !== -1) {
-          content = content.substring(finalThinkTagIndex + 8).trim();
-        }
-        
-        // If that didn't work, try to extract actual content after removing think tags
-        if (!content) {
-          content = sanitizeThinkTags(response.data.choices[0].message.content || '');
-        }
-        
-        // If we still have nothing, use the original content (could be empty)
-        if (!content) {
-          content = response.data.choices[0].message.content || '';
-        }
         
         return content;
       } catch (ioError) {
-        console.error('Error in IO.net API call:', ioError);
-        throw new Error(`IO.net API error: ${ioError.message}`);
+        console.error('Error in Groq API call:', ioError);
+        throw new Error(`Groq API error: ${ioError.message}`);
       }
 
     } else {
@@ -352,12 +335,12 @@ Please analyze this data and provide insights that directly address the user's q
           MODEL_CONFIG['io.net'].url,
           {
             model: MODEL_CONFIG['io.net'].model,
-            reasoningContent: false,
             messages: messages
           },
           {
             headers: {
-              'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`
+              'Authorization': `Bearer ${MODEL_CONFIG['io.net'].authToken}`,
+              'Content-Type': 'application/json'
             }
           }
         );
@@ -365,33 +348,17 @@ Please analyze this data and provide insights that directly address the user's q
         // Check for valid response before attempting to access content
         if (!response || !response.data || !response.data.choices || 
             !response.data.choices[0] || !response.data.choices[0].message) {
-          console.error('Invalid response structure from IO.net API:', response);
+          console.error('Invalid response structure from Groq API:', response);
           throw new Error('Received invalid response structure from API');
         }
 
-        // Get content and handle special io.net think tag format
+        // Get content from Groq API response
         let content = response.data.choices[0].message.content || '';
-        
-        // First get everything after the final closing think tag if any exist
-        const finalThinkTagIndex = content.lastIndexOf('</think>');
-        if (finalThinkTagIndex !== -1) {
-          content = content.substring(finalThinkTagIndex + 8).trim();
-        }
-        
-        // If that didn't work, try to extract actual content after removing think tags
-        if (!content) {
-          content = sanitizeThinkTags(response.data.choices[0].message.content || '');
-        }
-        
-        // If we still have nothing, use the original content (could be empty)
-        if (!content) {
-          content = response.data.choices[0].message.content || '';
-        }
         
         return content;
       } catch (ioError) {
-        console.error('Error in IO.net API call:', ioError);
-        throw new Error(`IO.net API error: ${ioError.message}`);
+        console.error('Error in Groq API call:', ioError);
+        throw new Error(`Groq API error: ${ioError.message}`);
       }
     }
 
