@@ -71,9 +71,9 @@ const MODEL_CONFIG = {
   },
   'io.net': {
     type: 'io.net',
-    model: 'deepseek-ai/deepseek-r1-distill-llama-70b',
+    model: 'deepseek-r1-distill-llama-70b',
     url: 'https://api.groq.com/openai/v1/chat/completions',
-    authToken: process.env.GROQ_API_KEY || ''
+    authToken: process.env.REACT_APP_GROQ_API_KEY || process.env.GROQ_API_KEY || ''
   }
 };
 
