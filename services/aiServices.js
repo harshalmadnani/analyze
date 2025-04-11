@@ -133,10 +133,6 @@ Available functions:
   - discord(token) - returns Discord server link
   - description(token) - returns project description
 
-- Historical Data:
-  - priceHistoryData(token, period) - returns array of {date, price} objects
-  - getHistoricPortfolioData(addresses, period) - returns {wallet, wallets, currentBalance, balanceHistory}
-  Periods can be "1d", "7d", "30d", "1y"
 
 - Wallet Analysis:
   - getWalletPortfolio(address) - returns detailed wallet information
@@ -202,7 +198,6 @@ Example format:
 \`\`\`javascript
 const data = {
   currentPrice: await price("bitcoin"),
-  priceHistory: await priceHistoryData("bitcoin", "30d"),
   socialMetrics: await getSocialData("bitcoin"),
   news: await getTopicNews("bitcoin"),
 };
