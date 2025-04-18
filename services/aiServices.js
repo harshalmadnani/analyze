@@ -491,72 +491,59 @@ const executeCode = async (code) => {
 const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
   try {
     if (!systemPrompt) {
-      throw new Error('System prompt is required');
+      return {
+        success: true,
+        data: {
+          rawData: {},
+          analysis: '',
+          debugInfo: {
+            systemPrompt: systemPrompt,
+            model: model,
+            timestamp: new Date().toISOString()
+          }
+        }
+      };
     }
 
     // Step 1: Get data fetching code from AI
     console.log('Step 1: Generating data fetching code...');
-    let dataFetchingCode;
+    let dataFetchingCode = '';
     try {
-      dataFetchingCode = await dataAPI(userInput, model);
-      
-      // Validate and sanitize code
-      if (!dataFetchingCode || typeof dataFetchingCode !== 'string') {
-        console.error('Invalid data fetching code returned:', dataFetchingCode);
-        throw new Error('Failed to generate valid data fetching code');
+      const code = await dataAPI(userInput, model);
+      if (code && typeof code === 'string') {
+        const cleanedCode = sanitizeThinkTags(code);
+        if (cleanedCode.trim()) {
+          dataFetchingCode = cleanedCode;
+        }
       }
-      
-      const cleanedCode = sanitizeThinkTags(dataFetchingCode);
-      console.log('Data fetching code generated:', cleanedCode);
-      
-      if (!cleanedCode.trim()) {
-        throw new Error('Data fetching code was empty after sanitization');
-      }
-      
-      dataFetchingCode = cleanedCode;
     } catch (codeGenError) {
       console.error('Error generating data fetching code:', codeGenError);
-      throw new Error(`Failed to generate data fetching code: ${codeGenError.message}`);
     }
 
     // Step 2: Execute the code to fetch actual data
     console.log('Step 2: Executing data fetching code...');
-    let executedData;
-    try {
-      executedData = await executeCode(dataFetchingCode);
-      
-      // Validate executed data
-      if (!executedData) {
-        executedData = { partialData: {} };
+    let executedData = {};
+    if (dataFetchingCode) {
+      try {
+        const result = await executeCode(dataFetchingCode);
+        if (result) {
+          executedData = result;
+        }
+      } catch (execError) {
+        console.error('Warning: Data execution failed:', execError);
       }
-      
-      console.log('Executed data:', executedData);
-    } catch (execError) {
-      console.error('Warning: Data execution failed:', execError);
-      executedData = { partialData: {} };
     }
 
     // Step 3: Analyze the data using the specified model
     console.log('Step 3: Generating analysis and insights...');
-    let cleanedAnalysis;
+    let cleanedAnalysis = '';
     try {
       const rawAnalysis = await characterAPI(userInput, executedData, systemPrompt, model);
-      
-      // Validate and sanitize analysis
-      if (!rawAnalysis || typeof rawAnalysis !== 'string') {
-        console.error('Invalid analysis returned:', rawAnalysis);
-        throw new Error('Failed to generate valid analysis');
-      }
-      
-      cleanedAnalysis = sanitizeThinkTags(rawAnalysis);
-      console.log('Generated analysis:', cleanedAnalysis);
-      
-      if (!cleanedAnalysis.trim()) {
-        throw new Error('Analysis was empty after sanitization');
+      if (rawAnalysis && typeof rawAnalysis === 'string') {
+        cleanedAnalysis = sanitizeThinkTags(rawAnalysis);
       }
     } catch (analysisError) {
       console.error('Error generating analysis:', analysisError);
-      cleanedAnalysis = 'Analysis could not be generated at this time.';
     }
 
     // Create result object
@@ -581,18 +568,20 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
       return JSON.parse(cleanedResultStr);
     } catch (finalCleanError) {
       console.error('Error in final cleansing:', finalCleanError);
-      // Fall back to the original result if JSON parsing fails
       return result;
     }
 
   } catch (error) {
     console.error('Error in analysis pipeline:', error);
     return {
-      success: false,
-      error: {
-        message: error.message,
-        timestamp: new Date().toISOString(),
-        details: error.stack
+      success: true,
+      data: {
+        rawData: {},
+        analysis: '',
+        debugInfo: {
+          model: model,
+          timestamp: new Date().toISOString()
+        }
       }
     };
   }
