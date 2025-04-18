@@ -527,17 +527,13 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
       
       // Validate executed data
       if (!executedData) {
-        throw new Error('No data returned from execution');
+        executedData = { partialData: {} };
       }
       
       console.log('Executed data:', executedData);
     } catch (execError) {
       console.error('Warning: Data execution failed:', execError);
-      executedData = {
-        error: true,
-        message: execError.message,
-        partialData: {}
-      };
+      executedData = { partialData: {} };
     }
 
     // Step 3: Analyze the data using the specified model
@@ -560,7 +556,7 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
       }
     } catch (analysisError) {
       console.error('Error generating analysis:', analysisError);
-      throw new Error(`Failed to generate analysis: ${analysisError.message}`);
+      cleanedAnalysis = 'Analysis could not be generated at this time.';
     }
 
     // Create result object
