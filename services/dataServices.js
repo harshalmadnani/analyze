@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { getTokenName } = require('../utils/calculationUtils');
 
 // API Keys with fallbacks for different naming conventions
 const MOBULA_API_KEY = process.env.MOBULA_API_KEY || process.env.REACT_APP_MOBULA_API_KEY || 'e26c7e73-d918-44d9-9de3-7cbe55b63b99';
@@ -7,9 +8,10 @@ const LUNARCRUSH_API_KEY = process.env.LUNARCRUSH_API_KEY || process.env.REACT_A
 
 // API Functions
 const fetchPriceHistory = async (coinname, from = null, to = null) => {
+  const normalizedCoin = getTokenName(coinname);
   const response = await axios.get(`https://api.mobula.io/api/1/market/history`, {
     params: {
-      asset: coinname,
+      asset: normalizedCoin,
       from: from,
       to: to,
     },
@@ -21,18 +23,20 @@ const fetchPriceHistory = async (coinname, from = null, to = null) => {
 };
 
 const fetchCryptoPanicData = async (coinname) => {
+  const normalizedCoin = getTokenName(coinname);
   const response = await axios.get(`https://cryptopanic.com/api/free/v1/posts/`, {
     params: {
       auth_token: CRYPTOPANIC_API_KEY,
       public: 'true',
-      currencies: coinname
+      currencies: normalizedCoin
     }
   });
   return response.data?.results;
 };
 
 const fetchMarketData = async (coinname) => {
-  const response = await axios.get(`https://api.mobula.io/api/1/market/data?asset=${coinname}`, {
+  const normalizedCoin = getTokenName(coinname);
+  const response = await axios.get(`https://api.mobula.io/api/1/market/data?asset=${normalizedCoin}`, {
     headers: {
       Authorization: MOBULA_API_KEY
     }
@@ -41,7 +45,8 @@ const fetchMarketData = async (coinname) => {
 };
 
 const fetchMetadata = async (coinname) => {
-  const response = await axios.get(`https://api.mobula.io/api/1/metadata?asset=${coinname}`, {
+  const normalizedCoin = getTokenName(coinname);
+  const response = await axios.get(`https://api.mobula.io/api/1/metadata?asset=${normalizedCoin}`, {
     headers: {
       Authorization: MOBULA_API_KEY
     }
@@ -78,7 +83,8 @@ const fetchWalletPortfolio = async (address) => {
 // Fetch social data from LunarCrush
 const fetchSocialData = async (token) => {
   try {
-    const response = await axios.get(`https://lunarcrush.com/api4/public/topic/${token}/v1`, {
+    const normalizedToken = getTokenName(token);
+    const response = await axios.get(`https://lunarcrush.com/api4/public/topic/${normalizedToken}/v1`, {
       headers: {
         'Authorization': `Bearer ${LUNARCRUSH_API_KEY}`
       }
@@ -113,7 +119,8 @@ const fetchCoinList = async (sort = 'social_dominance', filter = '', limit = 20)
 // Fetch topic news from LunarCrush
 const fetchTopicNews = async (topic) => {
   try {
-    const response = await axios.get(`https://lunarcrush.com/api4/public/topic/${topic}/news/v1`, {
+    const normalizedTopic = getTokenName(topic);
+    const response = await axios.get(`https://lunarcrush.com/api4/public/topic/${normalizedTopic}/news/v1`, {
       headers: {
         'Authorization': `Bearer ${LUNARCRUSH_API_KEY}`
       }

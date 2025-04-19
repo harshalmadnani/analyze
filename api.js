@@ -45,7 +45,7 @@ const limiter = rateLimit({
 // ✅ API Endpoint
 app.post('/analyze', limiter, async (req, res) => {
   try {
-    const { query, systemPrompt, model } = req.body;
+    const { query, systemPrompt, model, dataSources } = req.body;
 
     if (!query) {
       logger.warn('Request received without query');
@@ -55,10 +55,11 @@ app.post('/analyze', limiter, async (req, res) => {
     logger.info('Processing analysis request', {
       query: query.substring(0, 100),
       model: model || 'o3-mini',
+      dataSources: dataSources || [],
       timestamp: new Date().toISOString()
     });
 
-    const result = await analyzeQuery(query, systemPrompt, model);
+    const result = await analyzeQuery(query, systemPrompt, model, dataSources);
 
     res.json(result);
   } catch (error) {

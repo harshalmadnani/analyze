@@ -96,14 +96,28 @@ const kadenacontext = async (query) => {
  * AI function to generate data fetching code based on user input
  * @param {string} userInput - The user's question
  * @param {string} model - The AI model to use
+ * @param {array} dataSources - Array of data source categories to include
  * @returns {Promise<string>} - Data fetching code
  */
-const dataAPI = async (userInput, model = 'io.net') => {
+const dataAPI = async (userInput, model = 'io.net', dataSources = []) => {
   try {
-    const systemContent = `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
+    // Function to include or exclude a data section based on dataSources
+    const includeSection = (section) => {
+      // If dataSources is empty, include all sections
+      if (!dataSources || dataSources.length === 0) return true;
+      // Otherwise check if the section is in the dataSources array
+      return dataSources.includes(section);
+    };
+
+    // Base system content
+    let systemContent = `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
             The user's wallet addresses are: ${portfolioAddresses.join(', ')}
 
-Available functions:
+Available functions:`;
+
+    // Market Data section
+    if (includeSection('market')) {
+      systemContent += `
 - Market Data:
   - price(token) - returns current price in USD
   - volume(token) - returns 24h volume
@@ -124,22 +138,36 @@ Available functions:
   - atl(token) - returns all-time low price
   - rank(token) - returns market rank
   - totalSupply(token) - returns total supply
-  - circulatingSupply(token) - returns circulating supply
+  - circulatingSupply(token) - returns circulating supply`;
+    }
+
+    // Social/Info section
+    if (includeSection('social')) {
+      systemContent += `
 
 - Social/Info:
   - website(token) - returns official website URL
   - twitter(token) - returns Twitter handle
   - telegram(token) - returns Telegram group link
   - discord(token) - returns Discord server link
-  - description(token) - returns project description
+  - description(token) - returns project description`;
+    }
 
+    // Wallet Analysis section
+    if (includeSection('wallet')) {
+      systemContent += `
 
 - Wallet Analysis:
   - getWalletPortfolio(address) - returns detailed wallet information
   - cexs(token) - returns exchange listing information
   - investors(token) - returns detailed investor information
   - distribution(token) - returns token distribution
-  - releaseSchedule(token) - returns token release schedule
+  - releaseSchedule(token) - returns token release schedule`;
+    }
+
+    // Kadena Blockchain section
+    if (includeSection('kadena-data')) {
+      systemContent += `
 
 - Kadena Blockchain:
   - kadenacontext(query) - returns RAG context for general Kadena-related queries not realted to any specific on chain data
@@ -149,7 +177,12 @@ Available functions:
   - kadenafunctions.getTransactions(filters) - returns filtered transactions
   - kadenafunctions.getTransactionsByPublicKey(publicKey, first, after) - returns transactions for a public key
   - kadenafunctions.getTransfers(accountName, chainId, first, after) - returns token transfers for an account
-  - kadenafunctions.getEvents(filters) - returns filtered events
+  - kadenafunctions.getEvents(filters) - returns filtered events`;
+    }
+
+    // Social Analysis section
+    if (includeSection('social_analysis')) {
+      systemContent += `
 
 - Social Analysis:
   - getSocialData(token) - returns detailed social metrics including:
@@ -159,7 +192,12 @@ Available functions:
     * Sentiment analysis by platform
     * 24h interaction totals
     * Number of contributors and total posts
-    * Trend direction (up/down/flat)
+    * Trend direction (up/down/flat)`;
+    }
+
+    // List and Category Data section
+    if (includeSection('list')) {
+      systemContent += `
 
 - List and Category Data:
   - getListByCategory(sort, filter, limit) - returns filtered list of coins with metrics
@@ -171,7 +209,12 @@ Available functions:
       - Market cap and dominance
       - Social metrics and sentiment
       - Galaxy Score and AltRank
-      - Categories and blockchains
+      - Categories and blockchains`;
+    }
+
+    // News and Social Data section
+    if (includeSection('news')) {
+      systemContent += `
 
 - News and Social Data:
   - getTopicNews(topic) - returns latest news articles for a topic with:
@@ -179,20 +222,34 @@ Available functions:
     * Publication date and sentiment score
     * Creator information (name, followers)
     * Interaction metrics (24h and total)
-  - getSocialData(token) - returns detailed social metrics
+  - getSocialData(token) - returns detailed social metrics`;
+    }
+
+    // Token Metrics section
+    if (includeSection('token_metrics')) {
+      systemContent += `
 
 - Token Metrics:
   - liquidity(token) - returns current liquidity in USD
   - liquidityChange24h(token) - returns 24h liquidity change percentage
   - offChainVolume(token) - returns off-chain volume in USD
   - volume7d(token) - returns 7-day volume in USD
-  - volumeChange24h(token) - returns 24h volume change percentage
+  - volumeChange24h(token) - returns 24h volume change percentage`;
+    }
+
+    // Price Changes section
+    if (includeSection('price_changes')) {
+      systemContent += `
 
 - Price Changes:
   - priceChange24h(token) - returns 24h price change percentage
   - priceChange1h(token) - returns 1h price change percentage
   - priceChange7d(token) - returns 7d price change percentage
-  - priceChange1m(token) - returns 30d price change percentage
+  - priceChange1m(token) - returns 30d price change percentage`;
+    }
+
+    // Example and instructions section (always included)
+    systemContent += `
 
 Example format:
 \`\`\`javascript
@@ -486,9 +543,10 @@ const executeCode = async (code) => {
  * @param {string} userInput - The user's question
  * @param {string} systemPrompt - System prompt for AI character
  * @param {string} model - The AI model to use
+ * @param {array} dataSources - Array of data source categories to include
  * @returns {Promise<object>} - Analysis results
  */
-const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
+const analyzeQuery = async (userInput, systemPrompt, model = 'io.net', dataSources = []) => {
   try {
     if (!systemPrompt) {
       return {
@@ -499,6 +557,7 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
           debugInfo: {
             systemPrompt: systemPrompt,
             model: model,
+            dataSources: dataSources,
             timestamp: new Date().toISOString()
           }
         }
@@ -509,7 +568,7 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
     console.log('Step 1: Generating data fetching code...');
     let dataFetchingCode = '';
     try {
-      const code = await dataAPI(userInput, model);
+      const code = await dataAPI(userInput, model, dataSources);
       if (code && typeof code === 'string') {
         const cleanedCode = sanitizeThinkTags(code);
         if (cleanedCode.trim()) {
@@ -556,6 +615,7 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
           generatedCode: dataFetchingCode,
           systemPrompt: systemPrompt,
           model: model,
+          dataSources: dataSources,
           timestamp: new Date().toISOString()
         }
       }
@@ -580,6 +640,7 @@ const analyzeQuery = async (userInput, systemPrompt, model = 'io.net') => {
         analysis: '',
         debugInfo: {
           model: model,
+          dataSources: dataSources,
           timestamp: new Date().toISOString()
         }
       }
