@@ -1,13 +1,35 @@
 {
   "name": "xade-api",
   "version": "1.0.0",
-  "description": "Xade API services",
-  "main": "index.js",
+  "description": "Xade API for cryptocurrency data and AI analysis",
+  "main": "api.js",
   "scripts": {
+    "start": "node api.js",
+    "dev": "nodemon api.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "axios": "^1.6.7",
-    "js-yaml": "^4.1.0"
-  }
+    "axios": "^1.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "openai": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xade-finance/xade-api.git"
+  },
+  "keywords": [
+    "cryptocurrency",
+    "api",
+    "ai",
+    "finance",
+    "kadena"
+  ],
+  "author": "Xade Finance",
+  "license": "MIT"
 }

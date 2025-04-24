@@ -24,8 +24,43 @@ const {
   getTokenName
 } = require('./utils/calculationUtils');
 
-// Import existing services
-const tokenServices = require('./services/tokenServices');
+const {
+  website,
+  twitter,
+  telegram,
+  discord,
+  description,
+  price,
+  volume,
+  marketCap,
+  marketCapDiluted,
+  liquidity,
+  liquidityChange24h,
+  offChainVolume,
+  volume7d,
+  volumeChange24h,
+  priceChange24h,
+  priceChange1h,
+  priceChange7d,
+  priceChange1m,
+  priceChange30d,
+  priceChange1y,
+  ath,
+  atl,
+  rank,
+  totalSupply,
+  circulatingSupply,
+  cexs,
+  investors,
+  distribution,
+  releaseSchedule,
+  priceHistoryData,
+  isListed,
+  getPriceHistory,
+  getSocialData,
+  getListByCategory
+} = require('./services/tokenServices');
+
 const kadenafunctions = require('./services/kadenaServices');
 
 // Get API key from various possible environment variable names
@@ -97,13 +132,17 @@ module.exports = {
     executeCode,
     dataAPI,
     characterAPI,
-    ...tokenServices,  // Export all of token services
+    priceHistoryData,
+    priceChange30d,
+    getSocialData,
+    getListByCategory,
     kadenacontext,
     kadenafunctions,
     TIME_PERIODS,
     LUNARCRUSH_API_KEY,
     portfolioAddresses,
-    openai
+    openai,
+    // Add more exports as needed
 };
 
 
