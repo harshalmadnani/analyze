@@ -61,8 +61,6 @@ const {
   getListByCategory
 } = require('./services/tokenServices');
 
-const kadenafunctions = require('./services/kadenaServices');
-
 // Get API key from various possible environment variable names
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.REACT_APP_OPENAI_API_KEY;
 
@@ -82,19 +80,6 @@ const portfolioAddresses = [
 
 // Add LunarCrush API constant
 const LUNARCRUSH_API_KEY = process.env.LUNARCRUSH_API_KEY || process.env.REACT_APP_LUNARCRUSH_API_KEY;
-
-// Add kadenacontext function to fetch context for kadena addresses
-const kadenacontext = async (query) => {
-  try {
-    const response = await axios.post('https://api.xade.xyz/rag', {
-      question: query
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching Kadena context:', error);
-    return { error: error.message };
-  }
-};
 
 // Constants
 const TIME_PERIODS = {
@@ -136,8 +121,6 @@ module.exports = {
     priceChange30d,
     getSocialData,
     getListByCategory,
-    kadenacontext,
-    kadenafunctions,
     TIME_PERIODS,
     LUNARCRUSH_API_KEY,
     portfolioAddresses,

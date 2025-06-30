@@ -81,17 +81,6 @@ const MODEL_CONFIG = {
 const { getTokenName } = require('../utils/calculationUtils');
 const portfolioAddresses = ["0x0000000000000000000000000000000000000000"]; // Default address
 
-// Get kadenacontext function from agent.js properly
-// We'll use a lazy loading approach to avoid circular reference
-let kadenacontextFn = null;
-const kadenacontext = async (query) => {
-  if (!kadenacontextFn) {
-    // Import on first use to avoid circular dependency
-    kadenacontextFn = require('../agent').kadenacontext;
-  }
-  return kadenacontextFn(query);
-};
-
 /**
  * AI function to generate data fetching code based on user input
  * @param {string} userInput - The user's question
@@ -163,21 +152,6 @@ Available functions:`;
   - investors(token) - returns detailed investor information
   - distribution(token) - returns token distribution
   - releaseSchedule(token) - returns token release schedule`;
-    }
-
-    // Kadena Blockchain section
-    if (includeSection('kadena-data')) {
-      systemContent += `
-
-- Kadena Blockchain:
-  - kadenacontext(query) - returns RAG context for general Kadena-related queries not realted to any specific on chain data
-  - kadenafunctions.getBlock(hash) - returns information about a specific block
-  - kadenafunctions.getBlocksFromDepth(minimumDepth, first) - returns blocks starting from given depth
-  - kadenafunctions.getBlocksFromHeight(startHeight, first) - returns blocks starting from given height
-  - kadenafunctions.getTransactions(filters) - returns filtered transactions
-  - kadenafunctions.getTransactionsByPublicKey(publicKey, first, after) - returns transactions for a public key
-  - kadenafunctions.getTransfers(accountName, chainId, first, after) - returns token transfers for an account
-  - kadenafunctions.getEvents(filters) - returns filtered events`;
     }
 
     // Social Analysis section
@@ -469,12 +443,6 @@ const executeCode = async (code) => {
       // Import all required functions and utilities
       ...require('../utils/calculationUtils'),
       ...require('../services/tokenServices'),
-      
-      // Add kadenafunctions to context
-      kadenafunctions: require('../services/kadenaServices'),
-      
-      // Add kadenacontext to context
-      kadenacontext: async (query) => await kadenacontext(query),
       
       // Add necessary constants
       TIME_PERIODS: {
